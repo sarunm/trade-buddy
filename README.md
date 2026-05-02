@@ -279,3 +279,4 @@ Generate a local dashboard:
 PYTHONPATH=python/src python3 -m trade_buddy.cli dashboard --output reports/dashboard.html
 ```
 # trade-buddy
+# trade-buddy
