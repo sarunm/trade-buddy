@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PYTHONPYCACHEPREFIX=/private/tmp/trade_buddy_pycache PYTHONPATH=src python3 -m compileall src)",
+      "Bash(PYTHONPATH=src python3 -m unittest discover -s tests)",
+      "Bash(go build:*)",
+      "Bash(mkdir -p /Users/nick/2_SideProjects/trade-buddy/.claude/tasks /Users/nick/2_SideProjects/trade-buddy/.claude/topics /Users/nick/2_SideProjects/trade-buddy/.claude/sessions /Users/nick/2_SideProjects/trade-buddy/.claude/private)",
+      "Bash(touch /Users/nick/2_SideProjects/trade-buddy/.claude/tasks/.gitkeep /Users/nick/2_SideProjects/trade-buddy/.claude/topics/.gitkeep /Users/nick/2_SideProjects/trade-buddy/.claude/sessions/.gitkeep /Users/nick/2_SideProjects/trade-buddy/.claude/private/.gitkeep)",
+      "Bash(go get:*)",
+      "Bash(go mod:*)",
+      "Bash(docker compose:*)",
+      "Bash(curl -s http://localhost:8080/health)",
+      "Bash(go version:*)"
+    ]
+  }
+}

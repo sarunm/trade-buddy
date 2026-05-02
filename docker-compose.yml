@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: trade_buddy
+      POSTGRES_USER: trade_buddy
+      POSTGRES_PASSWORD: trade_buddy
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trade_buddy -d trade_buddy"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./api
+    environment:
+      DATABASE_URL: postgres://trade_buddy:trade_buddy@db:5432/trade_buddy?sslmode=disable
+      DATA_DIR: /app/data
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  ui:
+    build:
+      context: ./ui
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+      API_INTERNAL_BASE_URL: http://api:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
