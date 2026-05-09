@@ -73,25 +73,22 @@ func (s *YahooSource) Load(ctx context.Context, symbol string, timeframe string,
 	candles := make([]Candle, 0, len(result.Timestamp))
 
 	for i, ts := range result.Timestamp {
-		// Yahoo can return nulls as 0 in JSON if we are not careful,
-		// but usually they are just omitted or null.
-		// Indicators might have different lengths but they should match Timestamp.
-		if i >= len(quote.Open) || i >= len(quote.High) || i >= len(quote.Low) || i >= len(quote.Close) {
+		if i >= len(quote.Open) || i >= len(quote.High) || i >= len(quote.Low) || i >= len(quote.Close) || i >= len(quote.Volume) {
 			break
 		}
 
-		// Filter invalid candles (null/zero)
-		if quote.Open[i] == 0 || quote.High[i] == 0 || quote.Low[i] == 0 || quote.Close[i] == 0 {
+		open, high, low, close, volume, ok := yahooQuoteValues(quote.Open[i], quote.High[i], quote.Low[i], quote.Close[i], quote.Volume[i])
+		if !ok {
 			continue
 		}
 
 		candles = append(candles, Candle{
 			Time:   time.Unix(ts, 0),
-			Open:   quote.Open[i],
-			High:   quote.High[i],
-			Low:    quote.Low[i],
-			Close:  quote.Close[i],
-			Volume: quote.Volume[i],
+			Open:   open,
+			High:   high,
+			Low:    low,
+			Close:  close,
+			Volume: volume,
 		})
 	}
 
@@ -165,17 +162,30 @@ func calculateYahooRange(interval string, limit int) string {
 	}
 }
 
+func yahooQuoteValues(open, high, low, close, volume *float64) (float64, float64, float64, float64, float64, bool) {
+	if open == nil || high == nil || low == nil || close == nil {
+		return 0, 0, 0, 0, 0, false
+	}
+	if *open == 0 || *high == 0 || *low == 0 || *close == 0 {
+		return 0, 0, 0, 0, 0, false
+	}
+	if volume == nil {
+		return *open, *high, *low, *close, 0, true
+	}
+	return *open, *high, *low, *close, *volume, true
+}
+
 type yahooResponse struct {
 	Chart struct {
 		Result []struct {
 			Timestamp  []int64 `json:"timestamp"`
 			Indicators struct {
 				Quote []struct {
-					Open   []float64 `json:"open"`
-					High   []float64 `json:"high"`
-					Low    []float64 `json:"low"`
-					Close  []float64 `json:"close"`
-					Volume []float64 `json:"volume"`
+					Open   []*float64 `json:"open"`
+					High   []*float64 `json:"high"`
+					Low    []*float64 `json:"low"`
+					Close  []*float64 `json:"close"`
+					Volume []*float64 `json:"volume"`
 				} `json:"quote"`
 			} `json:"indicators"`
 		} `json:"result"`

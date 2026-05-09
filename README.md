@@ -1,23 +1,42 @@
 # Trade Buddy
 
-Agent-first trading analysis and journaling toolkit for gold/XAUUSD setups.
+Local-first trading analysis and journaling toolkit for gold/XAUUSD setups.
 
-The first version is intentionally small:
+The primary app is now the Dockerized Go/Next.js stack:
 
-- load OHLCV candles from CSV
-- analyze market structure, ATR, volume spikes, support/resistance, and simple candle signals
-- generate a trade setup with entry, stop loss, take profit, risk/reward, confidence, and reasoning
-- evaluate whether a setup hit stop, target, or timed out on future candles
-- run a simple rolling backtest over historical CSV candles
-- backfill unresolved setups/signals from historical candles
-- persist setups and outcomes in SQLite for later review
-- generate local reports and an HTML dashboard with a candlestick snapshot
+- Go/Gin API in `api/` with explicit SQL migrations and Postgres persistence
+- Next.js dashboard in `ui/` with TradingView Lightweight Charts
+- Yahoo Finance market data for XAUUSD/GC=F candles
+- weekly forecast JSON plus cached SVG plan maps
+- saved alerts, alert outcomes, and learning stats in Postgres
+- Python source in `python/` retained as the behavior reference
 
 ## Quick Start
 
-The original Python app now lives under `python/` while the new stack is being
-migrated into `api/` and `ui/`. From the repo root, run Python commands with
-`PYTHONPATH=python/src`, or install the package with `python3 -m pip install -e python`.
+From the repo root:
+
+```bash
+docker compose up --build
+```
+
+Then open:
+
+```text
+http://localhost:3000
+```
+
+Useful API checks:
+
+```bash
+curl http://localhost:8080/health
+curl 'http://localhost:8080/api/chart?symbol=XAUUSD&tf=1h&source=yahoo&limit=200'
+curl http://localhost:8080/api/weekly-plan
+curl http://localhost:8080/api/journal/stats
+```
+
+The original Python app remains available under `python/`. From the repo root,
+run Python commands with `PYTHONPATH=python/src`, or install the package with
+`python3 -m pip install -e python`.
 
 ```bash
 PYTHONPATH=python/src python3 -m trade_buddy.cli analyze XAUUSD --tf 15m --csv examples/xauusd_15m.csv
@@ -174,7 +193,7 @@ PYTHONPATH=python/src python3 -m trade_buddy.cli recommend --min-count 3
 
 ## Next Steps
 
-- Add an interactive local dashboard or small web app around the existing journal.
+- Keep Python as the behavior reference while hardening the Go/Next.js stack.
 - Add richer pattern detection and more explicit strategy explanations.
 - Add bulk historical dataset import for multi-month backfills.
 - Re-enable third-party integrations when credentials/runtime are ready.

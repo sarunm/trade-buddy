@@ -22,7 +22,9 @@ services:
     environment:
       DATABASE_URL: postgres://trade_buddy:trade_buddy@db:5432/trade_buddy?sslmode=disable
       DATA_DIR: /app/data
+      DEFAULT_SOURCE: ${DEFAULT_SOURCE:-finnhub}
       PORT: "8080"
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
     ports:
       - "8080:8080"
     volumes:
@@ -37,6 +39,7 @@ services:
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
       API_INTERNAL_BASE_URL: http://api:8080
+      NEXT_PUBLIC_DEFAULT_SOURCE: ${DEFAULT_SOURCE:-finnhub}
     ports:
       - "3000:3000"
     depends_on:

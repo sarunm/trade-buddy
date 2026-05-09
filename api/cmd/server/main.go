@@ -14,6 +14,9 @@ import (
 	"trade-buddy/api/internal/config"
 	"trade-buddy/api/internal/db"
 	httpapi "trade-buddy/api/internal/http"
+	"trade-buddy/api/internal/marketdata"
+	"trade-buddy/api/internal/monitor"
+	"trade-buddy/api/internal/stream"
 )
 
 func main() {
@@ -40,9 +43,40 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	monitorCfg := monitor.NewConfigService(gormDB, 60*time.Second)
+	monitorDefaults, _ := monitorCfg.Load(ctx)
+	monitorSource, err := marketdata.NewSourceFromName(cfg.DefaultSource, cfg.FinnhubAPIKey)
+	if err != nil {
+		slog.Warn("monitor source unavailable, defaulting to yahoo", "error", err)
+		monitorSource, _ = marketdata.NewSourceFromName("yahoo", "")
+	}
+	signalSvc := monitor.NewSignalService(gormDB, 5*time.Minute)
+	lineToken := os.Getenv("LINE_CHANNEL_ACCESS_TOKEN")
+	lineToID := os.Getenv("LINE_TO_ID")
+	notifier := monitor.NewNotifier(lineToken, lineToID)
+	mon := monitor.New(gormDB, monitorSource, monitorCfg, signalSvc, slog.Default(), notifier)
+	go func() {
+		if err := mon.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			slog.Error("monitor stopped", "error", err)
+		}
+	}()
+	_ = monitorDefaults
+	slog.Info("monitor started")
+
+	hub := stream.NewHub()
+	builder := stream.NewBuilder(hub)
+	if cfg.FinnhubAPIKey != "" {
+		go stream.RunFinnhub(ctx, cfg.FinnhubAPIKey, builder)
+		slog.Info("finnhub stream started")
+	} else {
+		slog.Info("finnhub stream disabled — set FINNHUB_API_KEY to enable")
+	}
+
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Config: cfg,
-		DB:     gormDB,
+		Config:  cfg,
+		DB:      gormDB,
+		Hub:     hub,
+		Monitor: mon,
 	})
 
 	server := &http.Server{
@@ -50,7 +84,7 @@ func run() error {
 		Handler:           router,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      15 * time.Second,
+		WriteTimeout:      0, // SSE connections need no write timeout
 		IdleTimeout:       60 * time.Second,
 	}
 

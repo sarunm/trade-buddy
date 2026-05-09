@@ -39,10 +39,14 @@ func FetchBars(ctx context.Context, db *gorm.DB, symbol, timeframe, source strin
 	var rows []row
 	result := db.WithContext(ctx).Raw(
 		`SELECT ts, open, high, low, close, volume
-		 FROM market_bars
-		 WHERE symbol = ? AND timeframe = ? AND source = ?
-		 ORDER BY ts ASC
-		 LIMIT ?`,
+		 FROM (
+		   SELECT ts, open, high, low, close, volume
+		   FROM market_bars
+		   WHERE symbol = ? AND timeframe = ? AND source = ?
+		   ORDER BY ts DESC
+		   LIMIT ?
+		 ) latest
+		 ORDER BY ts ASC`,
 		symbol, timeframe, source, limit,
 	).Scan(&rows)
 	if result.Error != nil {
